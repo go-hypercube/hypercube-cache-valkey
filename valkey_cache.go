@@ -8,21 +8,21 @@ import (
 	"github.com/valkey-io/valkey-go"
 )
 
-// ValkeyCache implements cache.Cache on top of a valkey.Client,
+// valkeyCache implements cache.Cache on top of a valkey.Client,
 // mirroring hypercube-cache-redis so a driver repository only needs to
 // depend on the cache package, not the rest of the framework.
-type ValkeyCache struct {
+type valkeyCache struct {
 	client valkey.Client
 }
 
 // New wraps an already-constructed valkey.Client as a cache.Cache
-// implementation. The caller owns the client's lifecycle (including
+// implementation. The caller owns the client's life-cycle (including
 // calling client.Close() on shutdown).
-func New(client valkey.Client) *ValkeyCache {
-	return &ValkeyCache{client: client}
+func New(client valkey.Client) cache.Cache {
+	return &valkeyCache{client: client}
 }
 
-func (c *ValkeyCache) Get(ctx context.Context, key string) (string, error) {
+func (c *valkeyCache) Get(ctx context.Context, key string) (string, error) {
 	value, err := c.client.Do(ctx, c.client.B().Get().Key(key).Build()).ToString()
 	if valkey.IsValkeyNil(err) {
 		return "", cache.ErrNotFound
@@ -30,7 +30,7 @@ func (c *ValkeyCache) Get(ctx context.Context, key string) (string, error) {
 	return value, err
 }
 
-func (c *ValkeyCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
+func (c *valkeyCache) Set(ctx context.Context, key string, value string, ttl time.Duration) error {
 	if ttl < 0 {
 		return cache.ErrInvalidTTL
 	}
@@ -42,20 +42,20 @@ func (c *ValkeyCache) Set(ctx context.Context, key string, value string, ttl tim
 	return c.client.Do(ctx, cmd.Build()).Error()
 }
 
-func (c *ValkeyCache) Delete(ctx context.Context, key string) error {
+func (c *valkeyCache) Delete(ctx context.Context, key string) error {
 	return c.client.Do(ctx, c.client.B().Del().Key(key).Build()).Error()
 }
 
-func (c *ValkeyCache) Has(ctx context.Context, key string) (bool, error) {
+func (c *valkeyCache) Has(ctx context.Context, key string) (bool, error) {
 	n, err := c.client.Do(ctx, c.client.B().Exists().Key(key).Build()).ToInt64()
 	return n > 0, err
 }
 
-func (c *ValkeyCache) Increment(ctx context.Context, key string, delta int64) (int64, error) {
+func (c *valkeyCache) Increment(ctx context.Context, key string, delta int64) (int64, error) {
 	return c.client.Do(ctx, c.client.B().Incrby().Key(key).Increment(delta).Build()).ToInt64()
 }
 
-func (c *ValkeyCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
+func (c *valkeyCache) Expire(ctx context.Context, key string, ttl time.Duration) error {
 	if ttl < 0 {
 		return cache.ErrInvalidTTL
 	}
